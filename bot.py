@@ -4,21 +4,21 @@ from telegram.ext import (
     CallbackQueryHandler, ContextTypes, filters
 )
 from telegram.request import HTTPXRequest
-import sqlite3, uuid, asyncio
+import sqlite3, uuid, asyncio, os
 
 # ================= CONFIG =================
 
-import os
 TOKEN = os.getenv("BOT_TOKEN")
 BOT_USERNAME = "OnlyHubServerBot"
 
+# ✅ PUT YOUR REAL TELEGRAM USER ID(s) HERE
 ALLOWED_UPLOADERS = [8295342154, 7025490921]
 
 # 🔐 FORCE JOIN CHANNEL
 FORCE_CHANNEL = "only_hub69"
 FORCE_CHANNEL_URL = "https://t.me/only_hub69"
 
-# 📢 PRIVATE STORAGE CHANNEL (REPLACE THIS)
+# 📢 PRIVATE STORAGE CHANNEL (BOT MUST BE ADMIN)
 STORAGE_CHANNEL_ID = -1003893001355
 
 AUTO_DELETE_SECONDS = 20 * 60
@@ -52,7 +52,7 @@ db.commit()
 active_batches = {}   # user_id -> list of channel_msg_id
 active_caption = {}   # user_id -> caption
 
-# ================= HELPERS =================
+# ================= KEYBOARDS =================
 
 def join_keyboard():
     return InlineKeyboardMarkup([
@@ -67,6 +67,8 @@ def batch_keyboard():
         [InlineKeyboardButton("➕ Add more files", callback_data="add_more")],
         [InlineKeyboardButton("✅ Done (get link)", callback_data="done")]
     ])
+
+# ================= HELPERS =================
 
 async def is_member(bot, user_id):
     try:
@@ -116,7 +118,7 @@ async def send_batch(update, context, batch_id):
         return
 
     cur.execute("INSERT OR IGNORE INTO stats VALUES (?,0)", (batch_id,))
-    cur.execute("UPDATE stats SET downloads=downloads+1 WHERE batch_id=?", (batch_id,))
+    cur.execute("UPDATE stats SET downloads = downloads + 1 WHERE batch_id=?", (batch_id,))
     db.commit()
 
     warn = await update.message.reply_text(
@@ -157,6 +159,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if uid not in ALLOWED_UPLOADERS:
+        await q.message.reply_text("❌ You are not allowed to upload.")
         return
 
     if q.data == "add_more":
@@ -166,7 +169,7 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if q.data == "done":
         files = active_batches.get(uid)
         if not files:
-            await q.message.reply_text("❌ No files.")
+            await q.message.reply_text("❌ No files uploaded.")
             return
 
         batch_id = uuid.uuid4().hex[:10]
@@ -191,10 +194,16 @@ async def callbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
+
     if uid not in ALLOWED_UPLOADERS:
+        await update.message.reply_text("❌ You are not allowed to upload files.")
         return
 
     msg = update.message
+
+    if not (msg.document or msg.photo or msg.video or msg.audio):
+        return
+
     if msg.caption:
         active_caption[uid] = msg.caption
 
@@ -213,12 +222,18 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================= RUN =================
 
+file_filter = (
+    filters.Document.ALL |
+    filters.PHOTO |
+    filters.VIDEO |
+    filters.AUDIO
+)
+
 app = ApplicationBuilder().token(TOKEN).request(request).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(callbacks))
-app.add_handler(MessageHandler(filters.ALL, handle_file))
+app.add_handler(MessageHandler(file_filter, handle_file))
 
 print("Bot running...")
 app.run_polling()
-
