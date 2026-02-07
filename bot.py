@@ -10,16 +10,16 @@ import sqlite3, uuid, asyncio
 
 import os
 TOKEN = os.getenv("BOT_TOKEN")
-BOT_USERNAME = "hcjvkvkguf_bot"
+BOT_USERNAME = "OnlyHubServerBot"
 
 ALLOWED_UPLOADERS = [8295342154, 7025490921]
 
 # 🔐 FORCE JOIN CHANNEL
-FORCE_CHANNEL = "test1234521221412"
-FORCE_CHANNEL_URL = "https://t.me/test1234521221412"
+FORCE_CHANNEL = "only_hub69"
+FORCE_CHANNEL_URL = "https://t.me/only_hub69"
 
 # 📢 PRIVATE STORAGE CHANNEL (REPLACE THIS)
-STORAGE_CHANNEL_ID = -1003323683630
+STORAGE_CHANNEL_ID = -1003893001355
 
 AUTO_DELETE_SECONDS = 20 * 60
 
@@ -221,3 +221,4 @@ app.add_handler(MessageHandler(filters.ALL, handle_file))
 
 print("Bot running...")
 app.run_polling()
+
